@@ -13,9 +13,10 @@ parser.add_argument('--lr', type=float, default=1e-2)
 parser.add_argument('--l2', type=float, default=1e-3)
 args = parser.parse_args()
 
-LAYER1 = 1024 * 3
-LAYER2 = 1000
+LAYER1 = 100
+LAYER2 = 100
 LAYER3 = 100
+LAYER4 = 10
 
 TRAIN_EXAMPLES = 50000
 TEST_EXAMPLES = 10000
@@ -90,13 +91,16 @@ def zca_approx(data, ksize, ssize):
     return data
 
 #######################################
-
-(x_train, y_train), (x_test, y_test) = keras.datasets.cifar100.load_data()
+'''
+(x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
 assert(np.shape(x_train) == (50000, 32, 32, 3))
 assert(np.shape(x_test) == (10000, 32, 32, 3))
-'''
-y_train = keras.utils.to_categorical(y_train, 100)
+
+y_train = keras.utils.to_categorical(y_train, 10)
 x_train = x_train.astype('float32')
+
+y_test = keras.utils.to_categorical(y_test, 10)
+x_test = x_test.astype('float32')
 
 mean = np.mean(x_train, axis=0, keepdims=True)
 std = np.std(x_train, axis=0, ddof=1, keepdims=True)
@@ -104,91 +108,59 @@ scale = std
 x_train = x_train - mean
 x_train = x_train / scale
 x_train = x_train.reshape(TRAIN_EXAMPLES, 32, 32, 3)
-
-x_train = whiten(x_train)
+# x_train = whiten(x_train)
 # x_train = zca_approx(x_train, (8, 8, 3), (8, 8, 3))
 x_train = x_train.reshape(TRAIN_EXAMPLES, 1024 * 3)
-
-np.save('x_train_whiten', x_train)
 '''
-
-x_train = np.load('x_train_whiten.npy')
-# print (np.std(x_train), np.average(x_train))
-
 #######################################
 
 high = 1. / np.sqrt(LAYER1)
+weights0 = np.random.uniform(low=-high, high=high, size=(LAYER1, LAYER1))
+# weights0 = np.ones(shape=(LAYER1, LAYER1))
+# weights0 = np.eye(LAYER1)
+# print (np.linalg.matrix_rank(weights0))
+# print (np.linalg.matrix_rank(weights0.T @ weights0))
+
+high = 1. / np.sqrt(LAYER1)
 weights1 = np.random.uniform(low=-high, high=high, size=(LAYER1, LAYER2))
+bias1 = np.zeros(shape=LAYER2)
 
 high = 1. / np.sqrt(LAYER2)
 weights2 = np.random.uniform(low=-high, high=high, size=(LAYER2, LAYER3))
+bias2 = np.zeros(shape=LAYER3)
 
-high = 1. / np.sqrt(LAYER2)
-b2 = np.zeros(shape=(LAYER2, LAYER3))
+'''
+high = 1. / np.sqrt(LAYER3)
+weights3 = np.random.uniform(low=-high, high=high, size=(LAYER3, LAYER4))
+bias3 = np.zeros(shape=LAYER4)
+'''
 
-#######################################
+########
 
-batch_size = 50
-for ex in range(0, TRAIN_EXAMPLES, batch_size):
-    start = ex 
-    stop = ex + batch_size
+xy = 0.
 
-    A1 = x_train[start:stop]
+batch_size = 100
+for idx in range(0, 100000, batch_size):
+    start = idx
+    end = idx + batch_size
     
-    Z2 = np.dot(A1, weights1)
-    
-    # Z2 = whiten(Z2)
-    mean = np.mean(Z2, axis=0, keepdims=True)
-    std = np.std(Z2, axis=0, ddof=1, keepdims=True)
-    Z2 = (Z2 - mean) / std
-    
-    A2 = tanh(Z2)
-    
-    Z3 = np.dot(A2, weights2) 
-    A3 = softmax(Z3)
-    
-    labels = y_train[start:stop]
-    
-    D3 = (A3 - labels) / batch_size
-    D2 = np.dot(D3, weights2.T) * dtanh(A2)
-    
-    DW2 = np.dot(np.transpose(A2), D3) 
-    DW1 = np.dot(np.transpose(A1), D2)
-    
-    weights2 = weights2 - args.lr * DW2
-    weights1 = weights1 - args.lr * DW1
-    
-    DFB = np.dot(A2.T, Z3)
-    b2 = b2 + (1e-4 * DFB) - (1e-3 * b2)
-    # print (np.std(b2), np.std(weights2))
+    x = np.random.uniform(low=-1., high=1., size=(batch_size, LAYER1))
 
-##################################################
-
-if np.shape(weights2) == np.shape(b2):
-    flat_b2 = np.reshape(b2, (-1))
-else:
-    flat_b2 = np.reshape(b2.T, (-1))
+    x = x @ weights0
+    mean = np.mean(x, axis=0, keepdims=True)
+    std = np.std(x, axis=0, ddof=1, keepdims=True)
+    x = (x - mean) / std
+    x = whiten(x)
     
-flat_w2 = np.reshape(weights2, (-1))
-flat_b2 = flat_b2 * (np.std(flat_w2) / np.std(flat_b2))
+    y = x @ weights1
+    xy += x.T @ y
 
-loss1 = np.sum((flat_w2 - flat_b2) ** 2)
-angle1 = angle_between(flat_b2, flat_w2) * (180.0 / 3.14) 
+########
 
-##################################################
-
-b2 = np.random.uniform(low=-high, high=high, size=(LAYER2, LAYER3))
-flat_b2 = np.reshape(b2, (-1))
-flat_w2 = np.reshape(weights2, (-1))
-flat_b2 = flat_b2 * (np.std(flat_w2) / np.std(flat_b2))
-
-loss2 = np.sum((flat_w2 - flat_b2) ** 2)
-angle2 = angle_between(flat_b2, flat_w2) * (180.0 / 3.14)
-    
-##################################################
-    
-print (loss1, loss2)
+angle1 = angle_between(np.reshape(xy, -1), np.reshape(weights0.T @ weights0 @ weights1, -1)) * (180.0 / 3.14) 
+angle2 = angle_between(np.reshape(xy, -1), np.reshape(weights1, -1)) * (180.0 / 3.14)
 print (angle1, angle2)
-    
-##################################################
+
+########
+
 
