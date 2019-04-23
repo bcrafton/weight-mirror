@@ -137,22 +137,17 @@ bias3 = np.zeros(shape=LAYER4)
 
 ########
 
-xx2 = 0.
+xy = 0.
 
 batch_size = 100
 for idx in range(0, 100000, batch_size):
     start = idx
     end = idx + batch_size
     
-    x2 = np.random.uniform(low=-1., high=1., size=(batch_size, LAYER1))
-    
-    xx2 += (weights0.T @ weights0) @ (x2.T @ x2)
-    
-    # x2 = x2 @ weights0
-    # xx2 += x2.T @ x2
-    
-    # wow this fails horribly.
-    # xx2 += (weights0) @ (x2.T @ x2)
+    x = np.random.uniform(low=-1., high=1., size=(batch_size, LAYER1)) # @ weights0
+    # y = x @ weights1
+    # xy += x.T @ y
+    xy += (weights0.T @ weights0) @ (x.T @ x) @ weights1
 
 ########
 
@@ -162,12 +157,8 @@ plt.imshow(xx2, cmap='gray')
 plt.show()
 '''
 
-_weights1 = xx2 @ weights1
-# print (np.max(xx2 - np.eye(LAYER1)), np.min(xx2 - np.eye(LAYER1)))
-
-angle1 = angle_between(np.reshape(_weights1, -1), np.reshape((weights0.T @ weights0) @ weights1, -1)) * (180.0 / 3.14) 
-angle2 = angle_between(np.reshape(_weights1, -1), np.reshape(weights1, -1)) * (180.0 / 3.14)
-
+angle1 = angle_between(np.reshape(xy, -1), np.reshape(weights0 @ weights1, -1)) * (180.0 / 3.14) 
+angle2 = angle_between(np.reshape(xy, -1), np.reshape(weights1, -1)) * (180.0 / 3.14)
 print (angle1, angle2)
 
 ########

@@ -13,9 +13,9 @@ parser.add_argument('--lr', type=float, default=1e-2)
 parser.add_argument('--l2', type=float, default=1e-3)
 args = parser.parse_args()
 
-LAYER1 = 100
-LAYER2 = 100
-LAYER3 = 100
+LAYER1 = 1000
+LAYER2 = 1000
+LAYER3 = 1000
 LAYER4 = 10
 
 TRAIN_EXAMPLES = 50000
@@ -137,38 +137,11 @@ bias3 = np.zeros(shape=LAYER4)
 
 ########
 
-xx2 = 0.
-
-batch_size = 100
-for idx in range(0, 100000, batch_size):
-    start = idx
-    end = idx + batch_size
-    
-    x2 = np.random.uniform(low=-1., high=1., size=(batch_size, LAYER1))
-    
-    xx2 += (weights0.T @ weights0) @ (x2.T @ x2)
-    
-    # x2 = x2 @ weights0
-    # xx2 += x2.T @ x2
-    
-    # wow this fails horribly.
-    # xx2 += (weights0) @ (x2.T @ x2)
-
-########
-
-'''
-xx2 = xx2 / np.max(xx2)
-plt.imshow(xx2, cmap='gray')
-plt.show()
-'''
-
-_weights1 = xx2 @ weights1
-# print (np.max(xx2 - np.eye(LAYER1)), np.min(xx2 - np.eye(LAYER1)))
-
-angle1 = angle_between(np.reshape(_weights1, -1), np.reshape((weights0.T @ weights0) @ weights1, -1)) * (180.0 / 3.14) 
-angle2 = angle_between(np.reshape(_weights1, -1), np.reshape(weights1, -1)) * (180.0 / 3.14)
-
-print (angle1, angle2)
+for ii in range(10):
+    x = np.random.uniform(low=-1., high=1., size=(LAYER1))
+    angle1 = angle_between(x, (weights0.T @ weights0) @ x) * (180.0 / 3.14)
+    angle2 = angle_between(x, (weights0) @ x) * (180.0 / 3.14)
+    print (angle1, angle2)
 
 ########
 
